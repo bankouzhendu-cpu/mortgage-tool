@@ -424,19 +424,19 @@
 
         <div class="grid">
           <div class="label">ローン年数</div>
-          <input class="input" id="loan_years" type="number" min="1" max="50" value="35"/>
+          <input class="input" id="loan_years" type="number" min="1" max="50" value="35" inputmode="numeric"/>
 
           <div class="label">審査金利（%）</div>
-          <input class="input" id="loan_ratePct" type="number" step="0.01" min="0" max="20" value="3.25"/>
+          <input class="input" id="loan_ratePct" type="text" inputmode="decimal" autocomplete="off" value="3.25"/>
 
           <div class="label">年収（万円）</div>
-          <input class="input" id="loan_incomeMan" type="number" min="0" value=""/>
+          <input class="input" id="loan_incomeMan" type="number" min="0" value="0" inputmode="numeric"/>
 
           <div class="label">返済比率（%）</div>
-          <input class="input" id="loan_repayPct" type="number" step="0.01" min="0" max="100" value="35"/>
+          <input class="input" id="loan_repayPct" type="number" step="0.01" min="0" max="100" value="35" inputmode="decimal"/>
 
           <div class="label">借入希望額（万円）</div>
-          <input class="input" id="loan_wantMan" type="number" min="0" value=""/>
+          <input class="input" id="loan_wantMan" type="number" min="0" value="0" inputmode="numeric"/>
         </div>
 
         <!-- 既存借入：横並び -->
@@ -454,9 +454,17 @@
             <div class="label">返済月額（円）</div>
             <input class="input" id="loan_existMonthly" type="text" value="0" inputmode="numeric" autocomplete="off"/>
 
+            <div class="label">年間返済額（円）</div>
+            <input class="input" id="loan_existAnnualTotal" type="text" value="0" inputmode="numeric" autocomplete="off"/>
+
             <div class="label">年間ボーナス払い分（円）</div>
             <input class="input" id="loan_existBonusAnnual" type="text" value="0" inputmode="numeric" autocomplete="off"/>
           </div>
+
+          <p class="note">
+            ※ 年間返済額（円）が0より大きい場合は「年間返済額」を優先して月額換算します（ダブルカウント防止）。<br>
+            ※ 年間返済額が未入力（0）の場合は「返済月額＋年間ボーナス払い分/12」で計算します。
+          </p>
         </div>
 
         <div class="actions">
@@ -470,18 +478,22 @@
       <div class="card">
         <h2>結果</h2>
 
-        <div class="sectionTitle">～元利均等方式～</div>
-        <div class="box">
-          <div class="rlabel">借入可能額の目安</div><div class="rvalue" id="loan_annuityMax">約0万円</div>
-          <div class="rlabel">返済比率</div><div class="rvalue" id="loan_annuityRatioWant">0.00%</div>
+        <!-- ✅ 既存借入「なし」のときだけ表示 -->
+        <div id="loan_noExistResultsWrap">
+          <div class="sectionTitle">～元利均等方式～</div>
+          <div class="box">
+            <div class="rlabel">借入可能額の目安</div><div class="rvalue" id="loan_annuityMax">約0万円</div>
+            <div class="rlabel">返済比率</div><div class="rvalue" id="loan_annuityRatioWant">0.00%</div>
+          </div>
+
+          <div class="sectionTitle">～元金均等方式～</div>
+          <div class="box">
+            <div class="rlabel">借入可能額の目安</div><div class="rvalue" id="loan_equalMax">約0万円</div>
+            <div class="rlabel">返済比率</div><div class="rvalue" id="loan_equalRatioWant">0.00%</div>
+          </div>
         </div>
 
-        <div class="sectionTitle">～元金均等方式～</div>
-        <div class="box">
-          <div class="rlabel">借入可能額の目安</div><div class="rvalue" id="loan_equalMax">約0万円</div>
-          <div class="rlabel">返済比率</div><div class="rvalue" id="loan_equalRatioWant">0.00%</div>
-        </div>
-
+        <!-- ✅ 既存借入「あり」のときだけ表示 -->
         <div id="loan_existResultsWrap" class="isHidden">
           <div class="sectionTitle">～既存借入がある元利均等方式～</div>
           <div class="box">
@@ -509,7 +521,7 @@
           <input class="input" id="bonus_years" type="number" min="1" max="50" value="35" inputmode="numeric"/>
 
           <div class="label">借入金利（%）</div>
-          <input class="input" id="bonus_ratePct" type="number" step="0.001" min="0" max="20" value="0.810" inputmode="decimal"/>
+          <input class="input" id="bonus_ratePct" type="text" inputmode="decimal" autocomplete="off" value="0.810"/>
 
           <div class="label">借入希望額（万円）</div>
           <input class="input" id="bonus_loanMan" type="number" min="0" value="3000" inputmode="numeric"/>
@@ -518,7 +530,6 @@
           <input class="input" id="bonus_bonusMan" type="number" min="0" value="0" inputmode="numeric"/>
         </div>
 
-        <!-- 逆算：横並び -->
         <div class="toggleBlock" style="margin-top:12px;">
           <div class="toggleTitle">ボーナス払いを考える場合（逆算）</div>
           <div class="toggleRow noWrap">
@@ -541,8 +552,6 @@
           <button id="bonus_calcBtn">計算</button>
           <button id="bonus_resetBtn" class="ghost">入力クリア</button>
         </div>
-
-        <!-- ✅ 注釈(※) 削除済み -->
       </div>
 
       <div class="card">
@@ -587,8 +596,6 @@
             </div>
           </div>
         </div>
-
-        <!-- ✅ 注釈(※) 削除済み -->
       </div>
     </section>
 
@@ -719,6 +726,32 @@
     }
     function clamp0(v){ return Math.max(0, safeNumber(v)); }
 
+    // ✅ 小数入力（. を1つだけ許可）
+    function attachDecimalInput(el, {zeroOnBlur=true} = {}){
+      if (!el) return;
+      const sanitize = (val)=>{
+        let s = String(val ?? "");
+        s = s.replace(/,/g,"");
+        s = s.replace(/[^\d.]/g,"");
+        const firstDot = s.indexOf(".");
+        if (firstDot !== -1){
+          s = s.slice(0, firstDot + 1) + s.slice(firstDot + 1).replace(/\./g, "");
+        }
+        if (s.startsWith(".")) s = "0" + s;
+        return s;
+      };
+      el.addEventListener("input", ()=>{
+        const v = sanitize(el.value);
+        if (el.value !== v) el.value = v;
+      });
+      el.addEventListener("blur", ()=>{
+        const v = sanitize(el.value);
+        if (zeroOnBlur && (v === "" || v === ".")) el.value = "0";
+        else el.value = v;
+      });
+    }
+
+    // カンマ入力（数字のみ）
     function attachCommaInput(el, {zeroOnBlur=true} = {}){
       if (!el) return;
       const parse = (val)=> Number(String(val ?? "").replace(/,/g,"")) || 0;
@@ -791,29 +824,45 @@
       const rateEl = el("loan_ratePct");
       const repayEl = el("loan_repayPct");
 
+      attachDecimalInput(rateEl);
+
+      const noExistResultsWrap = el("loan_noExistResultsWrap");
       const existWrap = el("loan_existInputsWrap");
       const existResultsWrap = el("loan_existResultsWrap");
       const btnNo  = el("loan_existNo");
       const btnYes = el("loan_existYes");
 
       const existMonthlyEl = el("loan_existMonthly");
+      const existAnnualTotalEl = el("loan_existAnnualTotal");
       const existBonusEl = el("loan_existBonusAnnual");
+
       const existMonthlyParser = attachCommaInput(existMonthlyEl);
+      const existAnnualTotalParser = attachCommaInput(existAnnualTotalEl);
       const existBonusParser = attachCommaInput(existBonusEl);
 
       let hasExistingDebt = false;
 
       function setExistingMode(on){
         hasExistingDebt = !!on;
+
         btnNo.setAttribute("aria-pressed", hasExistingDebt ? "false" : "true");
         btnYes.setAttribute("aria-pressed", hasExistingDebt ? "true" : "false");
+
+        // ✅ 入力欄と結果の表示切替
         existWrap.classList.toggle("isHidden", !hasExistingDebt);
         existResultsWrap.classList.toggle("isHidden", !hasExistingDebt);
 
+        // ✅ 「なしの場合の結果」を既存借入ありのとき非表示
+        if (noExistResultsWrap){
+          noExistResultsWrap.classList.toggle("isHidden", hasExistingDebt);
+        }
+
         if (!hasExistingDebt){
           existMonthlyEl.value = "0";
+          existAnnualTotalEl.value = "0";
           existBonusEl.value = "0";
         }
+
         calculate();
       }
 
@@ -831,6 +880,7 @@
         const repayPct = safeNumber(repayEl.value || 0);
 
         const existMonthly = existMonthlyParser ? existMonthlyParser.parse(existMonthlyEl.value) : 0;
+        const existAnnualTotal = existAnnualTotalParser ? existAnnualTotalParser.parse(existAnnualTotalEl.value) : 0;
         const existBonusAnnual = existBonusParser ? existBonusParser.parse(existBonusEl.value) : 0;
 
         return {
@@ -840,6 +890,7 @@
           loanWant: wantMan * 10000,
           repayRatio: repayPct / 100,
           existMonthly,
+          existAnnualTotal,
           existBonusAnnual
         };
       }
@@ -859,13 +910,21 @@
         return (monthlyIncome * repayRatio) / coef;
       }
       function payment(loanYen, coef){ return loanYen * coef; }
-      function existMonthlyTotal(existMonthly, existBonusAnnual){
-        return existMonthly + (existBonusAnnual / 12);
+
+      // ✅ 既存借入の「月額換算」を作る（年額があれば年額優先）
+      function existMonthlyEquivalent(existMonthly, existAnnualTotal, existBonusAnnual){
+        const annual = clamp0(existAnnualTotal);
+        if (annual > 0){
+          return annual / 12;
+        }
+        return clamp0(existMonthly) + (clamp0(existBonusAnnual) / 12);
       }
-      function borrowDeduction(existMonthlyTotal, annCoef){
+
+      function borrowDeduction(existMonthlyEq, annCoef){
         if (annCoef === 0) return 0;
-        return existMonthlyTotal / annCoef;
+        return existMonthlyEq / annCoef;
       }
+
       function ratioPct(monthlyPayment, monthlyIncome){
         if (!Number.isFinite(monthlyIncome) || monthlyIncome <= 0) return 0;
         return (monthlyPayment / monthlyIncome) * 100;
@@ -881,6 +940,7 @@
 
       function calculate(){
         const x = getInput();
+
         const aCoef = annuityCoef(x.monthlyRate, x.n);
         const eCoef = equalCoef(x.monthlyRate, x.n);
 
@@ -890,17 +950,23 @@
         const annPayWant = payment(x.loanWant, aCoef);
         const eqPayWant  = payment(x.loanWant, eCoef);
 
-        const existM = hasExistingDebt ? existMonthlyTotal(x.existMonthly, x.existBonusAnnual) : 0;
+        // ✅ 既存借入ありのときだけ使う（月額換算）
+        const existM = hasExistingDebt
+          ? existMonthlyEquivalent(x.existMonthly, x.existAnnualTotal, x.existBonusAnnual)
+          : 0;
+
         const deduction = hasExistingDebt ? borrowDeduction(existM, aCoef) : 0;
 
         const annMaxEx = Math.max(0, annMax - deduction);
         const eqMaxEx  = Math.max(0, eqMax  - deduction);
 
+        // （表示は「既存借入なし」のときだけ見えるが、値は更新してOK）
         setText("loan_annuityMax", fmtMan(annMax));
         setText("loan_equalMax", fmtMan(eqMax));
         setText("loan_annuityRatioWant", fmtPct(ratioPct(annPayWant, x.monthlyIncome)));
         setText("loan_equalRatioWant", fmtPct(ratioPct(eqPayWant, x.monthlyIncome)));
 
+        // ✅ 既存借入あり用
         setText("loan_annuityMaxWithExist", fmtMan(annMaxEx));
         setText("loan_equalMaxWithExist", fmtMan(eqMaxEx));
         setText("loan_annuityRatioWantWithExist", fmtPct(ratioPctWithExist(annPayWant, existM, x.monthlyIncome)));
@@ -911,6 +977,7 @@
         ["loan_years","loan_ratePct","loan_incomeMan","loan_repayPct","loan_wantMan"]
           .forEach(id => { const x = el(id); if (x) x.value = ""; });
 
+        // 既存借入もリセット（表示も「なし」に戻る）
         setExistingMode(false);
 
         ["loan_annuityMax","loan_annuityRatioWant","loan_equalMax","loan_equalRatioWant",
@@ -931,6 +998,8 @@
       const fmtYen = (v) => Math.round(clamp0(v)).toLocaleString() + "円";
       const fmtMan = (yen) => Math.round(clamp0(yen) / 10000).toLocaleString() + "万円";
       function toNum(id){ return safeNumber(el(id)?.value || 0); }
+
+      attachDecimalInput(el("bonus_ratePct"));
 
       const wantMonthlyEl = el("bonus_wantMonthlyYen");
       const wantBonusAddEl = el("bonus_wantBonusAddYen");
@@ -1164,10 +1233,13 @@
       }, 0);
     });
 
+    // ✅ 小数入力の邪魔をしないよう、数字のみクリアは inputmode=numeric のときだけ
     document.addEventListener("keydown", (e) => {
       const el = e.target;
       if (!el.matches("input")) return;
       if (!/^\d$/.test(e.key)) return;
+      const im = (el.getAttribute("inputmode") || "").toLowerCase();
+      if (im !== "numeric") return;   // decimal には適用しない
       if (el.value === "0") el.value = "";
     });
   </script>
