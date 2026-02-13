@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>住宅ローンツール</title>
+
+  <style>
+    :root{
+      --label:#bfe9e6;
+      --input:#ffe45c;
+      --border:#222;
+      --bg:#f4f6f8;
+      --card:#fff;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:var(--bg);
+      font-family:system-ui,-apple-system,"Segoe UI","Meiryo",sans-serif;
+      color:#111;
+    }
+    .wrap{
+      max-width:1100px;
+      margin:14px auto 60px;
+      padding:0 14px;
+    }
+    h1{font-size:20px;margin:10px 0 10px}
+    h2{font-size:18px;margin:0 0 8px}
+
+    /* ===== Tabs ===== */
+    .tabs{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin:10px 0 14px;
+    }
+    .tabBtn{
+      border:1px solid #111;
+      border-radius:999px;
+      padding:10px 14px;
+      font-weight:900;
+      cursor:pointer;
+      background:#fff;
+      color:#111;
+      white-space:nowrap;
+      font-size:16px;
+    }
+    .tabBtn[aria-selected="true"]{
+      background:#111;
+      color:#fff;
+    }
+
+    /* ===== Common cards/buttons ===== */
+    .card{
+      background:var(--card);
+      border:1px solid #ddd;
+      border-radius:14px;
+      padding:14px;
+      margin-bottom:14px;
+      box-shadow:0 1px 2px rgba(0,0,0,.04);
+    }
+    .actions{display:flex;gap:10px;margin-top:14px}
+    button{
+      border:1px solid #111;
+      border-radius:10px;
+      padding:12px 14px;
+      font-weight:900;
+      cursor:pointer;
+      background:#111;
+      color:#fff;
+    }
+    button.ghost{background:#fff;color:#111}
+    .note{
+      margin:10px 0 0;
+      color:#444;
+      font-size:12px;
+      line-height:1.6;
+    }
+
+    /* hidden sections */
+    .app{display:none}
+    .app.isActive{display:block}
+
+    /* ===== Toggle UI (共通) ===== */
+    .toggleBlock{margin:10px 0 8px;}
+    .toggleBlock .toggleTitle{
+      font-weight:900;
+      margin:0 0 8px;
+    }
+    .toggleRow{
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+    .segBtn{
+      border:1px solid #111;
+      border-radius:999px;
+      padding:10px 14px;
+      font-weight:900;
+      cursor:pointer;
+      background:#fff;
+      color:#111;
+      white-space:nowrap;
+      flex:1;
+      text-align:center;
+    }
+    .segBtn[aria-pressed="true"]{
+      background:#111;
+      color:#fff;
+    }
+    .toggleRow.noWrap{flex-wrap:nowrap;}
+    .isHidden{display:none !important;}
+
+    /* ===== small screens ===== */
+    @media (max-width: 900px){
+      .wrap{padding:0 12px}
+
+      /* タブ：スマホは横並び3つ固定＆文字大きく */
+      .tabs{
+        flex-wrap:nowrap;
+        gap:10px;
+      }
+      .tabBtn{
+        flex:1;
+        padding:14px 0;
+        font-size:18px;
+        text-align:center;
+      }
+
+      .actions{flex-direction:column}
+      button{width:100%}
+    }
+  </style>
+
+  <!-- ===== App-specific styles (namespaced) ===== -->
+  <style>
+    /* === Loan === */
+    .app-loan .grid{
+      display:grid;
+      grid-template-columns:1fr 1fr 1fr 1fr;
+      gap:8px;
+      align-items:center;
+    }
+    .app-loan .label{
+      background:var(--label);
+      border:1px solid var(--border);
+      padding:10px;
+      font-weight:800;
+    }
+    .app-loan .input{
+      background:var(--input);
+      border:1px solid var(--border);
+      padding:10px;
+      font-weight:800;
+      text-align:right;
+      width:100%;
+      border-radius:10px;
+      font-size:16px;
+    }
+    .app-loan .subhead{margin:12px 0 6px;font-weight:900}
+    .app-loan .sectionTitle{margin:14px 0 8px;font-weight:900}
+    .app-loan .box{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      border:1px solid var(--border);
+      border-radius:10px;
+      overflow:hidden;
+      background:#fff;
+    }
+    .app-loan .rlabel{
+      background:var(--label);
+      padding:10px;
+      border-bottom:1px solid var(--border);
+      border-right:1px solid var(--border);
+      font-weight:900;
+    }
+    .app-loan .rvalue{
+      padding:10px;
+      border-bottom:1px solid var(--border);
+      font-weight:900;
+      text-align:right;
+      background:#fff;
+    }
+    .app-loan .box > :nth-last-child(-n+2){border-bottom:none}
+
+    /* スマホ：ラベル(水色)と入力(黄色)を同じ行に */
+    @media (max-width: 900px){
+      .app-loan .grid{
+        grid-template-columns: 1.2fr 1fr;
+        gap:10px 10px;
+        align-items:stretch;
+      }
+      .app-loan .label{
+        display:flex;
+        align-items:center;
+        min-height:52px;
+        border-radius:10px;
+      }
+      .app-loan .input{min-height:52px;}
+
+      .app-loan .box{grid-template-columns:1fr}
+      .app-loan .rlabel{border-right:none}
+    }
+  </style>
+
+  <style>
+    /* === Bonus === */
+    .app-bonus .blockTitle{font-weight:900;margin:2px 0 8px}
+    .app-bonus .sectionTitle{margin:14px 0 8px;font-weight:900}
+
+    .app-bonus .grid{
+      display:grid;
+      grid-template-columns:1fr 1fr 1fr 1fr;
+      gap:8px;
+      align-items:center;
+    }
+    .app-bonus .label{
+      background:var(--label);
+      border:1px solid var(--border);
+      padding:12px;
+      font-weight:900;
+      display:flex;
+      align-items:center;
+      border-radius:10px;
+      white-space:nowrap;
+      min-height:46px;
+    }
+    .app-bonus .input{
+      background:var(--input);
+      border:1px solid var(--border);
+      padding:12px;
+      font-weight:900;
+      text-align:right;
+      width:100%;
+      border-radius:10px;
+      min-height:46px;
+      font-size:16px;
+    }
+
+    .app-bonus .resultGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:12px 16px;
+      align-items:start;
+    }
+    .app-bonus .twoCols{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:12px 16px;
+      align-items:start;
+      margin-top:12px;
+    }
+    .app-bonus .box{
+      border:1px solid var(--border);
+      border-radius:10px;
+      overflow:hidden;
+      background:#fff;
+    }
+    .app-bonus .rrow{
+      display:grid;
+      grid-template-columns: 260px 1fr;
+      align-items:stretch;
+    }
+    .app-bonus .rlabel{
+      background:var(--label);
+      padding:12px;
+      font-weight:900;
+      border-right:1px solid var(--border);
+      display:flex;
+      align-items:center;
+      min-height:44px;
+      white-space:nowrap;
+    }
+    .app-bonus .rvalue{
+      padding:12px;
+      font-weight:900;
+      text-align:right;
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+      min-height:44px;
+      white-space:nowrap;
+    }
+    .app-bonus .rrow + .rrow .rlabel,
+    .app-bonus .rrow + .rrow .rvalue{border-top:1px solid var(--border)}
+
+    /* スマホ：返済タブも「ラベル＋入力」を1行化 */
+    @media (max-width: 900px){
+      .app-bonus .grid{
+        grid-template-columns: 1.2fr 1fr;
+        gap:10px 10px;
+        align-items:stretch;
+      }
+      .app-bonus .label{min-height:52px;}
+      .app-bonus .input{min-height:52px;}
+
+      .app-bonus .resultGrid{grid-template-columns:1fr}
+      .app-bonus .twoCols{grid-template-columns:1fr}
+      .app-bonus .rrow{grid-template-columns:1fr}
+      .app-bonus .rlabel{border-right:none}
+    }
+
+    /* 逆算入力だけ：右の黄色を広げて見切れ防止 */
+    .app-bonus .invGrid{
+      grid-template-columns: 1fr minmax(180px, 260px);
+    }
+    .app-bonus #bonus_invInputsWrap .label{
+      white-space: normal;
+      line-height: 1.15;
+    }
+    .app-bonus #bonus_invInputsWrap .input{
+      font-size:18px;
+      padding:12px 10px;
+    }
+    @media (max-width: 900px){
+      .app-bonus .invGrid{
+        grid-template-columns: 1fr 180px;
+      }
+    }
+  </style>
+
+  <style>
+    /* === Refi === */
+    .app-refi .sheet{
+      border:1px solid var(--border);
+      border-radius:12px;
+      overflow:hidden;
+      background:#fff;
+    }
+    .app-refi .row{
+      display:grid;
+      grid-template-columns: 1fr 320px;
+    }
+    .app-refi .cellL{
+      background:var(--label);
+      border-right:1px solid var(--border);
+      padding:12px;
+      font-weight:900;
+      display:flex;
+      align-items:center;
+      min-height:46px;
+      white-space:nowrap;
+    }
+    .app-refi .cellR{
+      padding:12px;
+      font-weight:900;
+      text-align:right;
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+      min-height:46px;
+      white-space:nowrap;
+      background:#fff;
+    }
+    .app-refi .row + .row .cellL,
+    .app-refi .row + .row .cellR{border-top:1px solid var(--border)}
+    .app-refi input.y{
+      width:100%;
+      border:1px solid var(--border);
+      background:var(--input);
+      font-weight:900;
+      text-align:right;
+      padding:10px 12px;
+      border-radius:10px;
+      font-size:16px;
+      outline:none;
+    }
+    .app-refi .sep{ border-top:2px solid var(--border); }
+
+    @media (max-width: 900px){
+      .app-refi .row{grid-template-columns:1fr}
+      .app-refi .cellL{border-right:none}
+    }
+
+    /* 借換：常にカンマ表示（overlay） */
+    .refiOverlayWrap{
+      position:relative;
+      width:100%;
+    }
+    .refiOverlayText{
+      position:absolute;
+      inset:0;
+      z-index:1;
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+      padding:10px 12px;
+      border:1px solid var(--border);
+      border-radius:10px;
+      background:var(--input);
+      font-weight:900;
+      font-size:16px;
+      color:#111;
+      pointer-events:none;
+      white-space:nowrap;
+    }
+    .refiOverlayWrap input.y{
+      position:relative;
+      z-index:2;
+      background:transparent;
+      color:transparent;
+      caret-color:#111;
+      border:0;
+      outline:none;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <h1>住宅ローンツール</h1>
+
+    <div class="tabs" role="tablist" aria-label="ツール切替">
+      <button class="tabBtn" role="tab" id="tab-loan"  aria-controls="panel-loan"  aria-selected="true"  data-target="loan">借入</button>
+      <button class="tabBtn" role="tab" id="tab-bonus" aria-controls="panel-bonus" aria-selected="false" data-target="bonus">返済</button>
+      <button class="tabBtn" role="tab" id="tab-refi"  aria-controls="panel-refi"  aria-selected="false" data-target="refi">借換</button>
+    </div>
+
+    <!-- ================== 1) 借入 ================== -->
+    <section class="app app-loan isActive" id="panel-loan" role="tabpanel" aria-labelledby="tab-loan">
+      <div class="card">
+        <h2>住宅ローン計算　(借入)</h2>
+
+        <div class="grid">
+          <div class="label">ローン年数</div>
+          <input class="input" id="loan_years" type="number" min="1" max="50" value="35"/>
+
+          <div class="label">審査金利（%）</div>
+          <input class="input" id="loan_ratePct" type="number" step="0.01" min="0" max="20" value="3.25"/>
+
+          <div class="label">年収（万円）</div>
+          <input class="input" id="loan_incomeMan" type="number" min="0" value=""/>
+
+          <div class="label">返済比率（%）</div>
+          <input class="input" id="loan_repayPct" type="number" step="0.01" min="0" max="100" value="35"/>
+
+          <div class="label">借入希望額（万円）</div>
+          <input class="input" id="loan_wantMan" type="number" min="0" value=""/>
+        </div>
+
+        <!-- 既存借入：横並び -->
+        <div class="toggleBlock" aria-label="既存借入の有無">
+          <div class="toggleTitle">既存借入</div>
+          <div class="toggleRow noWrap">
+            <button type="button" class="segBtn" id="loan_existNo"  aria-pressed="true">なし</button>
+            <button type="button" class="segBtn" id="loan_existYes" aria-pressed="false">あり</button>
+          </div>
+        </div>
+
+        <div id="loan_existInputsWrap" class="isHidden">
+          <div class="subhead">＜既存借入がある場合＞</div>
+          <div class="grid">
+            <div class="label">返済月額（円）</div>
+            <input class="input" id="loan_existMonthly" type="text" value="0" inputmode="numeric" autocomplete="off"/>
+
+            <div class="label">年間ボーナス払い分（円）</div>
+            <input class="input" id="loan_existBonusAnnual" type="text" value="0" inputmode="numeric" autocomplete="off"/>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="loan_calcBtn">計算</button>
+          <button id="loan_resetBtn" class="ghost">入力クリア</button>
+        </div>
+
+        <p class="note">※入力値をもとに、借入可能額の目安と返済比率を計算します。</p>
+      </div>
+
+      <div class="card">
+        <h2>結果</h2>
+
+        <div class="sectionTitle">～元利均等方式～</div>
+        <div class="box">
+          <div class="rlabel">借入可能額の目安</div><div class="rvalue" id="loan_annuityMax">約0万円</div>
+          <div class="rlabel">返済比率</div><div class="rvalue" id="loan_annuityRatioWant">0.00%</div>
+        </div>
+
+        <div class="sectionTitle">～元金均等方式～</div>
+        <div class="box">
+          <div class="rlabel">借入可能額の目安</div><div class="rvalue" id="loan_equalMax">約0万円</div>
+          <div class="rlabel">返済比率</div><div class="rvalue" id="loan_equalRatioWant">0.00%</div>
+        </div>
+
+        <div id="loan_existResultsWrap" class="isHidden">
+          <div class="sectionTitle">～既存借入がある元利均等方式～</div>
+          <div class="box">
+            <div class="rlabel">既存借入含む借入可能額の目安</div><div class="rvalue" id="loan_annuityMaxWithExist">約0万円</div>
+            <div class="rlabel">既存借入含む返済比率</div><div class="rvalue" id="loan_annuityRatioWantWithExist">0.00%</div>
+          </div>
+
+          <div class="sectionTitle">～既存借入がある元金均等方式～</div>
+          <div class="box">
+            <div class="rlabel">既存借入含む借入可能額の目安</div><div class="rvalue" id="loan_equalMaxWithExist">約0万円</div>
+            <div class="rlabel">既存借入含む返済比率</div><div class="rvalue" id="loan_equalRatioWantWithExist">0.00%</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================== 2) 返済 ================== -->
+    <section class="app app-bonus" id="panel-bonus" role="tabpanel" aria-labelledby="tab-bonus">
+      <div class="card">
+        <h2>住宅ローン計算（返済）</h2>
+
+        <div class="blockTitle">基本入力</div>
+        <div class="grid">
+          <div class="label">ローン年数</div>
+          <input class="input" id="bonus_years" type="number" min="1" max="50" value="35" inputmode="numeric"/>
+
+          <div class="label">借入金利（%）</div>
+          <input class="input" id="bonus_ratePct" type="number" step="0.001" min="0" max="20" value="0.810" inputmode="decimal"/>
+
+          <div class="label">借入希望額（万円）</div>
+          <input class="input" id="bonus_loanMan" type="number" min="0" value="3000" inputmode="numeric"/>
+
+          <div class="label">うちボーナス払い（万円）</div>
+          <input class="input" id="bonus_bonusMan" type="number" min="0" value="0" inputmode="numeric"/>
+        </div>
+
+        <!-- 逆算：横並び -->
+        <div class="toggleBlock" style="margin-top:12px;">
+          <div class="toggleTitle">ボーナス払いを考える場合（逆算）</div>
+          <div class="toggleRow noWrap">
+            <button type="button" class="segBtn" id="bonus_invOff" aria-pressed="true">使わない</button>
+            <button type="button" class="segBtn" id="bonus_invOn"  aria-pressed="false">使う</button>
+          </div>
+        </div>
+
+        <div id="bonus_invInputsWrap" class="isHidden">
+          <div class="grid invGrid">
+            <div class="label">希望毎月返済額（円）</div>
+            <input class="input" id="bonus_wantMonthlyYen" type="text" value="0" inputmode="numeric" autocomplete="off"/>
+
+            <div class="label">希望ボーナス払い額（円/1回）</div>
+            <input class="input" id="bonus_wantBonusAddYen" type="text" value="0" inputmode="numeric" autocomplete="off"/>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="bonus_calcBtn">計算</button>
+          <button id="bonus_resetBtn" class="ghost">入力クリア</button>
+        </div>
+
+        <!-- ✅ 注釈(※) 削除済み -->
+      </div>
+
+      <div class="card">
+        <h2>結果</h2>
+
+        <div class="resultGrid">
+          <div>
+            <div class="sectionTitle">～元利均等方式での目安～</div>
+            <div class="box">
+              <div class="rrow"><div class="rlabel">毎月の返済額</div><div class="rvalue" id="bonus_annuityMonthly">0円</div></div>
+              <div class="rrow"><div class="rlabel">ボーナス返済額（1回あたり）</div><div class="rvalue" id="bonus_annuityBonusPay">0円</div></div>
+              <div class="rrow"><div class="rlabel">総返済額（目安）</div><div class="rvalue" id="bonus_annuityTotal">0円</div></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="sectionTitle">～元金均等方式での目安～</div>
+            <div class="box">
+              <div class="rrow"><div class="rlabel">初回の毎月返済額</div><div class="rvalue" id="bonus_equalFirst">0円</div></div>
+              <div class="rrow"><div class="rlabel">ボーナス返済額（1回あたり）</div><div class="rvalue" id="bonus_equalBonusPay">0円</div></div>
+              <div class="rrow"><div class="rlabel">総返済額（目安）</div><div class="rvalue" id="bonus_equalTotal">0円</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="bonus_invResultsWrap" class="isHidden">
+          <div class="twoCols">
+            <div>
+              <div class="sectionTitle">希望毎月返済額（円） → 設定すべきボーナス払分</div>
+              <div class="box">
+                <div class="rrow"><div class="rlabel">設定すべきボーナス払分[元利均等]</div><div class="rvalue" id="bonus_needBonusFromMonthly_A">0万円</div></div>
+                <div class="rrow"><div class="rlabel">設定すべきボーナス払分[元金均等]</div><div class="rvalue" id="bonus_needBonusFromMonthly_E">0万円</div></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="sectionTitle">希望ボーナス払い額（円/1回） → 設定すべきボーナス払分</div>
+              <div class="box">
+                <div class="rrow"><div class="rlabel">設定すべきボーナス払分[元利均等]</div><div class="rvalue" id="bonus_needBonusFromAdd_A">0万円</div></div>
+                <div class="rrow"><div class="rlabel">設定すべきボーナス払分[元金均等]</div><div class="rvalue" id="bonus_needBonusFromAdd_E">0万円</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ✅ 注釈(※) 削除済み -->
+      </div>
+    </section>
+
+    <!-- ================== 3) 借換 ================== -->
+    <section class="app app-refi" id="panel-refi" role="tabpanel" aria-labelledby="tab-refi">
+      <div class="card">
+        <h2>借換（諸費用・借入額）</h2>
+
+        <div class="sheet">
+          <div class="row">
+            <div class="cellL">実行時残高</div>
+            <div class="cellR">
+              <div class="refiOverlayWrap">
+                <div class="refiOverlayText" data-for="refi_balanceYen">0</div>
+                <input class="y refi-comma" id="refi_balanceYen" type="text" value="0" inputmode="numeric" autocomplete="off">
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="cellL">抵当権設定登録免許税</div>
+            <div class="cellR" id="refi_regTaxYen">0円</div>
+          </div>
+
+          <div class="row">
+            <div class="cellL">司法書士報酬</div>
+            <div class="cellR">
+              <div class="refiOverlayWrap">
+                <div class="refiOverlayText" data-for="refi_shihoYen">55,000</div>
+                <input class="y refi-comma" id="refi_shihoYen" type="text" value="55,000" inputmode="numeric" autocomplete="off">
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="cellL">抹消費用</div>
+            <div class="cellR">
+              <div class="refiOverlayWrap">
+                <div class="refiOverlayText" data-for="refi_deleteYen">30,000</div>
+                <input class="y refi-comma" id="refi_deleteYen" type="text" value="30,000" inputmode="numeric" autocomplete="off">
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="cellL">完済手数料・経過利息</div>
+            <div class="cellR">
+              <div class="refiOverlayWrap">
+                <div class="refiOverlayText" data-for="refi_closeYen">100,000</div>
+                <input class="y refi-comma" id="refi_closeYen" type="text" value="100,000" inputmode="numeric" autocomplete="off">
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="cellL">収入印紙税（WEB無料）</div>
+            <div class="cellR">
+              <div class="refiOverlayWrap">
+                <div class="refiOverlayText" data-for="refi_stampYen">0</div>
+                <input class="y refi-comma" id="refi_stampYen" type="text" value="0" inputmode="numeric" autocomplete="off">
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="cellL">事務取扱手数料</div>
+            <div class="cellR" id="refi_adminFeeYen">0円</div>
+          </div>
+
+          <div class="row sep">
+            <div class="cellL">諸費用計</div>
+            <div class="cellR" id="refi_feeTotalYen">0円</div>
+          </div>
+
+          <div class="row sep">
+            <div class="cellL">ローン残高＋諸費用</div>
+            <div class="cellR" id="refi_needTotalYen">0円</div>
+          </div>
+
+          <div class="row">
+            <div class="cellL">借入額（10万円単位 切り捨て）</div>
+            <div class="cellR" id="refi_borrowYen">0円</div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="refi_calcBtn">計算</button>
+          <button id="refi_resetBtn" class="ghost">入力クリア</button>
+        </div>
+
+        <p class="note">※ 計算は「計算」ボタンを押した時のみ実行されます。</p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    /* ================== Tabs ================== */
+    (function(){
+      const tabButtons = Array.from(document.querySelectorAll(".tabBtn"));
+      const panels = {
+        loan: document.getElementById("panel-loan"),
+        bonus: document.getElementById("panel-bonus"),
+        refi: document.getElementById("panel-refi"),
+      };
+
+      function activate(name){
+        tabButtons.forEach(b=>{
+          const on = b.dataset.target === name;
+          b.setAttribute("aria-selected", on ? "true" : "false");
+        });
+        Object.entries(panels).forEach(([k, el])=>{
+          if (!el) return;
+          el.classList.toggle("isActive", k === name);
+        });
+        if (location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
+      }
+
+      tabButtons.forEach(b=> b.addEventListener("click", ()=>activate(b.dataset.target)));
+
+      const initial = (location.hash || "").replace("#","") || "loan";
+      if (panels[initial]) activate(initial);
+    })();
+
+    /* ================== Utilities ================== */
+    function safeNumber(v){
+      const n = Number(v);
+      return Number.isFinite(n) ? n : 0;
+    }
+    function clamp0(v){ return Math.max(0, safeNumber(v)); }
+
+    function attachCommaInput(el, {zeroOnBlur=true} = {}){
+      if (!el) return;
+      const parse = (val)=> Number(String(val ?? "").replace(/,/g,"")) || 0;
+      const format = (val)=>{
+        const raw = String(val ?? "").replace(/,/g,"");
+        const digits = raw.replace(/[^\d]/g,"");
+        if (digits === "") return "";
+        return Number(digits).toLocaleString();
+      };
+      el.addEventListener("input", ()=>{ el.value = format(el.value); });
+      el.addEventListener("blur", ()=>{
+        const n = parse(el.value);
+        el.value = (zeroOnBlur && n === 0) ? "0" : n.toLocaleString();
+      });
+      return { parse };
+    }
+
+    function attachCommaOverlayInput(inputEl){
+      if (!inputEl) return;
+      const id = inputEl.id;
+      const overlay = document.querySelector(`.refiOverlayText[data-for="${CSS.escape(id)}"]`);
+      if (!overlay) return;
+
+      const digitsOnly = (v)=> String(v ?? "").replace(/[^\d]/g,"");
+
+      const formatDigits = (digits)=>{
+        if (!digits) return "0";
+        try{ return BigInt(digits).toLocaleString(); }
+        catch(_){ return Number(digits).toLocaleString(); }
+      };
+
+      const sync = ()=>{
+        const d = digitsOnly(inputEl.value);
+        overlay.textContent = formatDigits(d);
+      };
+
+      sync();
+
+      inputEl.addEventListener("input", ()=>{
+        const d = digitsOnly(inputEl.value);
+        if (inputEl.value !== d) inputEl.value = d;
+        sync();
+      });
+
+      inputEl.addEventListener("focus", ()=>{
+        const d = digitsOnly(inputEl.value);
+        inputEl.value = d === "" ? "" : d;
+        sync();
+      });
+
+      inputEl.addEventListener("blur", ()=>{
+        const d = digitsOnly(inputEl.value);
+        inputEl.value = d === "" ? "0" : d;
+        sync();
+      });
+
+      return { parse: ()=> Number(digitsOnly(inputEl.value)) || 0 };
+    }
+
+    /* ================== 1) Loan app ================== */
+    (function(){
+      const fmtPct = (v) => `${(Number.isFinite(v) ? v : 0).toFixed(2)}%`;
+      const fmtMan = (yenAmount) => `約${Math.floor(clamp0(yenAmount) / 10000).toLocaleString()}万円`;
+
+      const el = (id)=>document.getElementById(id);
+
+      const yearsEl = el("loan_years");
+      const incomeEl = el("loan_incomeMan");
+      const wantEl = el("loan_wantMan");
+      const rateEl = el("loan_ratePct");
+      const repayEl = el("loan_repayPct");
+
+      const existWrap = el("loan_existInputsWrap");
+      const existResultsWrap = el("loan_existResultsWrap");
+      const btnNo  = el("loan_existNo");
+      const btnYes = el("loan_existYes");
+
+      const existMonthlyEl = el("loan_existMonthly");
+      const existBonusEl = el("loan_existBonusAnnual");
+      const existMonthlyParser = attachCommaInput(existMonthlyEl);
+      const existBonusParser = attachCommaInput(existBonusEl);
+
+      let hasExistingDebt = false;
+
+      function setExistingMode(on){
+        hasExistingDebt = !!on;
+        btnNo.setAttribute("aria-pressed", hasExistingDebt ? "false" : "true");
+        btnYes.setAttribute("aria-pressed", hasExistingDebt ? "true" : "false");
+        existWrap.classList.toggle("isHidden", !hasExistingDebt);
+        existResultsWrap.classList.toggle("isHidden", !hasExistingDebt);
+
+        if (!hasExistingDebt){
+          existMonthlyEl.value = "0";
+          existBonusEl.value = "0";
+        }
+        calculate();
+      }
+
+      btnNo.addEventListener("click", ()=>setExistingMode(false));
+      btnYes.addEventListener("click", ()=>{
+        setExistingMode(true);
+        setTimeout(()=>{ try { existMonthlyEl.focus(); } catch(_){} }, 0);
+      });
+
+      function getInput(){
+        const years = safeNumber(yearsEl.value || 0);
+        const incomeMan = safeNumber(incomeEl.value || 0);
+        const wantMan = safeNumber(wantEl.value || 0);
+        const ratePct = safeNumber(rateEl.value || 0);
+        const repayPct = safeNumber(repayEl.value || 0);
+
+        const existMonthly = existMonthlyParser ? existMonthlyParser.parse(existMonthlyEl.value) : 0;
+        const existBonusAnnual = existBonusParser ? existBonusParser.parse(existBonusEl.value) : 0;
+
+        return {
+          n: Math.max(0, years * 12),
+          monthlyIncome: (incomeMan * 10000) / 12,
+          monthlyRate: (ratePct / 100) / 12,
+          loanWant: wantMan * 10000,
+          repayRatio: repayPct / 100,
+          existMonthly,
+          existBonusAnnual
+        };
+      }
+
+      function annuityCoef(r, n){
+        if (n <= 0) return 0;
+        if (r === 0) return 1 / n;
+        const pow = Math.pow(1 + r, n);
+        return (r * pow) / (pow - 1);
+      }
+      function equalCoef(r, n){
+        if (n <= 0) return 0;
+        return (1 / n) + r;
+      }
+      function maxBorrow(monthlyIncome, repayRatio, coef){
+        if (coef === 0) return 0;
+        return (monthlyIncome * repayRatio) / coef;
+      }
+      function payment(loanYen, coef){ return loanYen * coef; }
+      function existMonthlyTotal(existMonthly, existBonusAnnual){
+        return existMonthly + (existBonusAnnual / 12);
+      }
+      function borrowDeduction(existMonthlyTotal, annCoef){
+        if (annCoef === 0) return 0;
+        return existMonthlyTotal / annCoef;
+      }
+      function ratioPct(monthlyPayment, monthlyIncome){
+        if (!Number.isFinite(monthlyIncome) || monthlyIncome <= 0) return 0;
+        return (monthlyPayment / monthlyIncome) * 100;
+      }
+      function ratioPctWithExist(monthlyPayment, existM, monthlyIncome){
+        if (!Number.isFinite(monthlyIncome) || monthlyIncome <= 0) return 0;
+        return ((monthlyPayment + existM) / monthlyIncome) * 100;
+      }
+      function setText(id, text){
+        const n = el(id);
+        if (n) n.textContent = text;
+      }
+
+      function calculate(){
+        const x = getInput();
+        const aCoef = annuityCoef(x.monthlyRate, x.n);
+        const eCoef = equalCoef(x.monthlyRate, x.n);
+
+        const annMax = maxBorrow(x.monthlyIncome, x.repayRatio, aCoef);
+        const eqMax  = maxBorrow(x.monthlyIncome, x.repayRatio, eCoef);
+
+        const annPayWant = payment(x.loanWant, aCoef);
+        const eqPayWant  = payment(x.loanWant, eCoef);
+
+        const existM = hasExistingDebt ? existMonthlyTotal(x.existMonthly, x.existBonusAnnual) : 0;
+        const deduction = hasExistingDebt ? borrowDeduction(existM, aCoef) : 0;
+
+        const annMaxEx = Math.max(0, annMax - deduction);
+        const eqMaxEx  = Math.max(0, eqMax  - deduction);
+
+        setText("loan_annuityMax", fmtMan(annMax));
+        setText("loan_equalMax", fmtMan(eqMax));
+        setText("loan_annuityRatioWant", fmtPct(ratioPct(annPayWant, x.monthlyIncome)));
+        setText("loan_equalRatioWant", fmtPct(ratioPct(eqPayWant, x.monthlyIncome)));
+
+        setText("loan_annuityMaxWithExist", fmtMan(annMaxEx));
+        setText("loan_equalMaxWithExist", fmtMan(eqMaxEx));
+        setText("loan_annuityRatioWantWithExist", fmtPct(ratioPctWithExist(annPayWant, existM, x.monthlyIncome)));
+        setText("loan_equalRatioWantWithExist", fmtPct(ratioPctWithExist(eqPayWant, existM, x.monthlyIncome)));
+      }
+
+      function resetForm(){
+        ["loan_years","loan_ratePct","loan_incomeMan","loan_repayPct","loan_wantMan"]
+          .forEach(id => { const x = el(id); if (x) x.value = ""; });
+
+        setExistingMode(false);
+
+        ["loan_annuityMax","loan_annuityRatioWant","loan_equalMax","loan_equalRatioWant",
+         "loan_annuityMaxWithExist","loan_annuityRatioWantWithExist","loan_equalMaxWithExist","loan_equalRatioWantWithExist"]
+          .forEach(id => setText(id, id.includes("Ratio") ? "0.00%" : "約0万円"));
+      }
+
+      el("loan_calcBtn").addEventListener("click", calculate);
+      el("loan_resetBtn").addEventListener("click", resetForm);
+
+      setExistingMode(false);
+      calculate();
+    })();
+
+    /* ================== 2) Bonus app ================== */
+    (function(){
+      const el = (id)=>document.getElementById(id);
+      const fmtYen = (v) => Math.round(clamp0(v)).toLocaleString() + "円";
+      const fmtMan = (yen) => Math.round(clamp0(yen) / 10000).toLocaleString() + "万円";
+      function toNum(id){ return safeNumber(el(id)?.value || 0); }
+
+      const wantMonthlyEl = el("bonus_wantMonthlyYen");
+      const wantBonusAddEl = el("bonus_wantBonusAddYen");
+      const wantMonthlyParser = attachCommaInput(wantMonthlyEl);
+      const wantBonusAddParser = attachCommaInput(wantBonusAddEl);
+
+      const invInputsWrap = el("bonus_invInputsWrap");
+      const invResultsWrap = el("bonus_invResultsWrap");
+      const btnOff = el("bonus_invOff");
+      const btnOn  = el("bonus_invOn");
+
+      let useInverse = false;
+
+      function setText(id, text){
+        const node = el(id);
+        if (node) node.textContent = text;
+      }
+      function resetInverseOutputs(){
+        ["bonus_needBonusFromMonthly_A","bonus_needBonusFromMonthly_E","bonus_needBonusFromAdd_A","bonus_needBonusFromAdd_E"]
+          .forEach(id => setText(id, "0万円"));
+      }
+      function setInverseMode(on){
+        useInverse = !!on;
+        btnOff.setAttribute("aria-pressed", useInverse ? "false" : "true");
+        btnOn.setAttribute("aria-pressed", useInverse ? "true" : "false");
+        invInputsWrap.classList.toggle("isHidden", !useInverse);
+        invResultsWrap.classList.toggle("isHidden", !useInverse);
+
+        if (!useInverse){
+          wantMonthlyEl.value = "0";
+          wantBonusAddEl.value = "0";
+          resetInverseOutputs();
+        }
+      }
+
+      btnOff.addEventListener("click", ()=>setInverseMode(false));
+      btnOn.addEventListener("click", ()=>{
+        setInverseMode(true);
+        setTimeout(()=>{ try { wantMonthlyEl.focus(); } catch(_){} }, 0);
+      });
+
+      function annuityCoef(rate, n){
+        if (n <= 0) return 0;
+        if (rate === 0) return 1 / n;
+        const pow = Math.pow(1 + rate, n);
+        return (rate * pow) / (pow - 1);
+      }
+      function equalTotalPayment(principal, ratePerPeriod, periods){
+        if (periods <= 0) return 0;
+        const principalPart = principal / periods;
+        let bal = principal;
+        let total = 0;
+        for (let i = 0; i < periods; i++){
+          const interest = bal * ratePerPeriod;
+          total += principalPart + interest;
+          bal -= principalPart;
+        }
+        return total;
+      }
+
+      function calcAll(){
+        const years = toNum("bonus_years");
+        const n = Math.max(0, years * 12);
+        const m = Math.max(0, years * 2);
+
+        const ratePct = toNum("bonus_ratePct");
+        const rm = (ratePct / 100) / 12;
+
+        const loanMan = toNum("bonus_loanMan");
+        const bonusMan = toNum("bonus_bonusMan");
+
+        const P = loanMan * 10000;
+        const B = Math.min(bonusMan * 10000, P);
+        const Pm = P - B;
+
+        const r6 = (rm === 0) ? 0 : (Math.pow(1 + rm, 6) - 1);
+
+        const coefM = annuityCoef(rm, n);
+        const coef6 = annuityCoef(r6, m);
+
+        const annMonthly = Pm * coefM;
+        const annBonus   = B  * coef6;
+        const annTotal   = (annMonthly * n) + (annBonus * m);
+
+        setText("bonus_annuityMonthly", fmtYen(annMonthly));
+        setText("bonus_annuityBonusPay", fmtYen(annBonus));
+        setText("bonus_annuityTotal", fmtYen(annTotal));
+
+        const eqMonthlyTotal = equalTotalPayment(Pm, rm, n);
+        const eqMonthlyFirst = (n > 0) ? (Pm / n + Pm * rm) : 0;
+
+        const eqBonusTotal = equalTotalPayment(B, r6, m);
+        const eqBonusFirst = (m > 0) ? (B / m + B * r6) : 0;
+
+        const eqTotal = eqMonthlyTotal + eqBonusTotal;
+
+        setText("bonus_equalFirst", fmtYen(eqMonthlyFirst));
+        setText("bonus_equalBonusPay", fmtYen(eqBonusFirst));
+        setText("bonus_equalTotal", fmtYen(eqTotal));
+
+        if (!useInverse){
+          resetInverseOutputs();
+          return;
+        }
+
+        const wantMonthly = wantMonthlyParser ? wantMonthlyParser.parse(wantMonthlyEl.value) : 0;
+        const wantBonusAdd = wantBonusAddParser ? wantBonusAddParser.parse(wantBonusAddEl.value) : 0;
+
+        let B_fromMonthly_A = P - (coefM === 0 ? P : (wantMonthly / coefM));
+        B_fromMonthly_A = Math.min(Math.max(0, B_fromMonthly_A), P);
+        setText("bonus_needBonusFromMonthly_A", fmtMan(B_fromMonthly_A));
+
+        const kM = (n > 0) ? (1 / n + rm) : 0;
+        let Pm_fromMonthly_E = (kM === 0) ? 0 : (wantMonthly / kM);
+        Pm_fromMonthly_E = Math.min(Math.max(0, Pm_fromMonthly_E), P);
+        let B_fromMonthly_E = P - Pm_fromMonthly_E;
+        B_fromMonthly_E = Math.min(Math.max(0, B_fromMonthly_E), P);
+        setText("bonus_needBonusFromMonthly_E", fmtMan(B_fromMonthly_E));
+
+        let B_fromAdd_A = (coef6 === 0) ? 0 : (wantBonusAdd / coef6);
+        B_fromAdd_A = Math.min(Math.max(0, B_fromAdd_A), P);
+        setText("bonus_needBonusFromAdd_A", fmtMan(B_fromAdd_A));
+
+        const k6 = (m > 0) ? (1 / m + r6) : 0;
+        let B_fromAdd_E = (k6 === 0) ? 0 : (wantBonusAdd / k6);
+        B_fromAdd_E = Math.min(Math.max(0, B_fromAdd_E), P);
+        setText("bonus_needBonusFromAdd_E", fmtMan(B_fromAdd_E));
+      }
+
+      function resetForm(){
+        ["bonus_years","bonus_ratePct","bonus_loanMan","bonus_bonusMan"]
+          .forEach(id => { const x = el(id); if (x) x.value = ""; });
+
+        wantMonthlyEl.value = "0";
+        wantBonusAddEl.value = "0";
+
+        ["bonus_annuityMonthly","bonus_annuityBonusPay","bonus_annuityTotal",
+         "bonus_equalFirst","bonus_equalBonusPay","bonus_equalTotal"]
+          .forEach(id => setText(id, "0円"));
+
+        resetInverseOutputs();
+        setInverseMode(false);
+      }
+
+      el("bonus_calcBtn").addEventListener("click", calcAll);
+      el("bonus_resetBtn").addEventListener("click", resetForm);
+
+      setInverseMode(false);
+    })();
+
+    /* ================== 3) Refi app ================== */
+    (function(){
+      const el = (id)=>document.getElementById(id);
+      const fmtYen = v => Math.round(clamp0(v)).toLocaleString()+"円";
+      const rd100k = v => Math.floor(clamp0(v)/100000)*100000;
+
+      const parsers = {};
+      document.querySelectorAll(".refi-comma").forEach(input=>{
+        const p = attachCommaOverlayInput(input);
+        if (p) parsers[input.id] = p;
+      });
+
+      const getRefiVal = (id)=>{
+        if (parsers[id]?.parse) return parsers[id].parse();
+        const v = el(id)?.value ?? "0";
+        return Number(String(v).replace(/[^\d]/g,"")) || 0;
+      };
+
+      function setAllOutputs0(){
+        ["refi_regTaxYen","refi_adminFeeYen","refi_feeTotalYen","refi_needTotalYen","refi_borrowYen"]
+          .forEach(id => { const x = el(id); if (x) x.textContent = "0円"; });
+      }
+
+      function calculate(){
+        const balance = getRefiVal("refi_balanceYen");
+        const shiho   = getRefiVal("refi_shihoYen");
+        const del     = getRefiVal("refi_deleteYen");
+        const close   = getRefiVal("refi_closeYen");
+        const stamp   = getRefiVal("refi_stampYen");
+
+        const fixed = shiho + del + close + stamp;
+        const rate = 0.026;
+
+        if (!Number.isFinite(rate) || rate >= 1){
+          setAllOutputs0();
+          return;
+        }
+
+        const rawBorrow = (balance + fixed) / (1 - rate);
+        const borrow = rd100k(rawBorrow);
+
+        const reg = borrow * 0.004;
+        const admin = borrow * 0.022;
+        const feeTotal = fixed + reg + admin;
+
+        el("refi_regTaxYen").textContent = fmtYen(reg);
+        el("refi_adminFeeYen").textContent = fmtYen(admin);
+        el("refi_feeTotalYen").textContent = fmtYen(feeTotal);
+        el("refi_needTotalYen").textContent = fmtYen(balance + feeTotal);
+        el("refi_borrowYen").textContent = fmtYen(borrow);
+      }
+
+      function resetForm(){
+        ["refi_balanceYen","refi_shihoYen","refi_deleteYen","refi_closeYen","refi_stampYen"]
+          .forEach(id => { const x = el(id); if (x) x.value = "0"; });
+
+        document.querySelectorAll(".refi-comma").forEach(input=>{
+          input.dispatchEvent(new Event("blur"));
+        });
+
+        setAllOutputs0();
+      }
+
+      el("refi_calcBtn").addEventListener("click", calculate);
+      el("refi_resetBtn").addEventListener("click", resetForm);
+
+      setAllOutputs0();
+    })();
+  </script>
+
+  <!-- ① 入力欄をフォーカスしたら全選択 -->
+  <script>
+    document.addEventListener("focusin", (e) => {
+      const el = e.target;
+      if (!el.matches("input, textarea")) return;
+      if (el.readOnly) return;
+      if (el.type === "button" || el.type === "submit") return;
+
+      setTimeout(() => {
+        try { el.select(); } catch (_) {}
+      }, 0);
+    });
+
+    document.addEventListener("keydown", (e) => {
+      const el = e.target;
+      if (!el.matches("input")) return;
+      if (!/^\d$/.test(e.key)) return;
+      if (el.value === "0") el.value = "";
+    });
+  </script>
+
+  <!-- ② Enterで次の欄へ -->
+  <script>
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      if (e.isComposing) return;
+
+      const el = e.target;
+      if (!el.matches("input, select")) return;
+
+      e.preventDefault();
+
+      const fields = Array.from(document.querySelectorAll("input, select"))
+        .filter(f => !f.disabled && f.type !== "hidden" && f.offsetParent !== null);
+
+      const idx = fields.indexOf(el);
+      if (idx >= 0 && idx < fields.length - 1) fields[idx + 1].focus();
+    }, true);
+  </script>
+
+</body>
+</html>
