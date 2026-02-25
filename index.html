@@ -112,6 +112,12 @@
     .toggleRow.noWrap{flex-wrap:nowrap;}
     .isHidden{display:none !important;}
 
+    /* ✅ 無効化（グレーアウト） */
+    .input.isDisabled{
+      background:#e6e6e6 !important;
+      color:#888 !important;
+    }
+
     /* ===== small screens ===== */
     @media (max-width: 900px){
       .wrap{padding:0 12px}
@@ -430,13 +436,13 @@
           <input class="input" id="loan_ratePct" type="text" inputmode="decimal" autocomplete="off" value="3.25"/>
 
           <div class="label">年収（万円）</div>
-          <input class="input" id="loan_incomeMan" type="number" min="0" value="0" inputmode="numeric"/>
+          <input class="input" id="loan_incomeMan" type="number" min="0" value="" inputmode="numeric"/>
 
           <div class="label">返済比率（%）</div>
           <input class="input" id="loan_repayPct" type="number" step="0.01" min="0" max="100" value="35" inputmode="decimal"/>
 
           <div class="label">借入希望額（万円）</div>
-          <input class="input" id="loan_wantMan" type="number" min="0" value="0" inputmode="numeric"/>
+          <input class="input" id="loan_wantMan" type="number" min="0" value="" inputmode="numeric"/>
         </div>
 
         <!-- 既存借入：横並び -->
@@ -449,6 +455,15 @@
         </div>
 
         <div id="loan_existInputsWrap" class="isHidden">
+          <!-- ✅ 追加：入力方法を選ぶ（色分け＆グレーアウト） -->
+          <div class="toggleBlock" aria-label="既存借入の入力方法">
+            <div class="toggleTitle">既存借入の入力方法（どちらか一方）</div>
+            <div class="toggleRow noWrap">
+              <button type="button" class="segBtn" id="exist_modeAnnual" aria-pressed="true">年間返済額で入力</button>
+              <button type="button" class="segBtn" id="exist_modeMonthly" aria-pressed="false">月額＋ボーナスで入力</button>
+            </div>
+          </div>
+
           <div class="subhead">＜既存借入がある場合＞</div>
           <div class="grid">
             <div class="label">返済月額（円）</div>
@@ -462,6 +477,7 @@
           </div>
 
           <p class="note">
+            ※ 入力方法で選んだ方のみ入力してください（もう一方はグレーアウトされます）。<br>
             ※ 年間返済額（円）が0より大きい場合は「年間返済額」を優先して月額換算します（ダブルカウント防止）。<br>
             ※ 年間返済額が未入力（0）の場合は「返済月額＋年間ボーナス払い分/12」で計算します。
           </p>
@@ -840,6 +856,53 @@
       const existAnnualTotalParser = attachCommaInput(existAnnualTotalEl);
       const existBonusParser = attachCommaInput(existBonusEl);
 
+      // ✅ 追加：入力方法トグル
+      const modeAnnualBtn = el("exist_modeAnnual");
+      const modeMonthlyBtn = el("exist_modeMonthly");
+      let existInputMode = "annual"; // "annual" or "monthly"
+
+      function setExistInputMode(mode){
+        existInputMode = (mode === "monthly") ? "monthly" : "annual";
+
+        if (modeAnnualBtn && modeMonthlyBtn){
+          modeAnnualBtn.setAttribute("aria-pressed", existInputMode === "annual" ? "true" : "false");
+          modeMonthlyBtn.setAttribute("aria-pressed", existInputMode === "monthly" ? "true" : "false");
+        }
+
+        const toDisabled = (input, on)=>{
+          if (!input) return;
+          input.disabled = !!on;
+          input.classList.toggle("isDisabled", !!on);
+        };
+
+        if (existInputMode === "annual"){
+          // 年額を使う → 月額&ボーナスは0にして無効化
+          existMonthlyEl.value = "0";
+          existBonusEl.value = "0";
+          existMonthlyEl.dispatchEvent(new Event("blur"));
+          existBonusEl.dispatchEvent(new Event("blur"));
+
+          toDisabled(existAnnualTotalEl, false);
+          toDisabled(existMonthlyEl, true);
+          toDisabled(existBonusEl, true);
+        }else{
+          // 月額+ボーナスを使う → 年額は0にして無効化
+          existAnnualTotalEl.value = "0";
+          existAnnualTotalEl.dispatchEvent(new Event("blur"));
+
+          toDisabled(existAnnualTotalEl, true);
+          toDisabled(existMonthlyEl, false);
+          toDisabled(existBonusEl, false);
+        }
+
+        calculate();
+      }
+
+      if (modeAnnualBtn && modeMonthlyBtn){
+        modeAnnualBtn.addEventListener("click", ()=>setExistInputMode("annual"));
+        modeMonthlyBtn.addEventListener("click", ()=>setExistInputMode("monthly"));
+      }
+
       let hasExistingDebt = false;
 
       function setExistingMode(on){
@@ -858,9 +921,19 @@
         }
 
         if (!hasExistingDebt){
+          // 既存借入OFFのときは値を初期化しておく
           existMonthlyEl.value = "0";
           existAnnualTotalEl.value = "0";
           existBonusEl.value = "0";
+          existMonthlyEl.dispatchEvent(new Event("blur"));
+          existAnnualTotalEl.dispatchEvent(new Event("blur"));
+          existBonusEl.dispatchEvent(new Event("blur"));
+
+          // ✅ 表示を戻した時に迷わないよう、入力モードは年額に戻す
+          setExistInputMode("annual");
+        }else{
+          // 既存借入ON → 現在のモードを適用（初期はannual）
+          setExistInputMode(existInputMode);
         }
 
         calculate();
@@ -869,7 +942,7 @@
       btnNo.addEventListener("click", ()=>setExistingMode(false));
       btnYes.addEventListener("click", ()=>{
         setExistingMode(true);
-        setTimeout(()=>{ try { existMonthlyEl.focus(); } catch(_){} }, 0);
+        setTimeout(()=>{ try { existInputMode === "annual" ? existAnnualTotalEl.focus() : existMonthlyEl.focus(); } catch(_){} }, 0);
       });
 
       function getInput(){
@@ -911,7 +984,7 @@
       }
       function payment(loanYen, coef){ return loanYen * coef; }
 
-      // ✅ 既存借入の「月額換算」を作る（年額があれば年額優先）
+      // ✅ 既存借入の「月額換算」（年額があれば年額優先）
       function existMonthlyEquivalent(existMonthly, existAnnualTotal, existBonusAnnual){
         const annual = clamp0(existAnnualTotal);
         if (annual > 0){
@@ -950,7 +1023,6 @@
         const annPayWant = payment(x.loanWant, aCoef);
         const eqPayWant  = payment(x.loanWant, eCoef);
 
-        // ✅ 既存借入ありのときだけ使う（月額換算）
         const existM = hasExistingDebt
           ? existMonthlyEquivalent(x.existMonthly, x.existAnnualTotal, x.existBonusAnnual)
           : 0;
@@ -960,13 +1032,11 @@
         const annMaxEx = Math.max(0, annMax - deduction);
         const eqMaxEx  = Math.max(0, eqMax  - deduction);
 
-        // （表示は「既存借入なし」のときだけ見えるが、値は更新してOK）
         setText("loan_annuityMax", fmtMan(annMax));
         setText("loan_equalMax", fmtMan(eqMax));
         setText("loan_annuityRatioWant", fmtPct(ratioPct(annPayWant, x.monthlyIncome)));
         setText("loan_equalRatioWant", fmtPct(ratioPct(eqPayWant, x.monthlyIncome)));
 
-        // ✅ 既存借入あり用
         setText("loan_annuityMaxWithExist", fmtMan(annMaxEx));
         setText("loan_equalMaxWithExist", fmtMan(eqMaxEx));
         setText("loan_annuityRatioWantWithExist", fmtPct(ratioPctWithExist(annPayWant, existM, x.monthlyIncome)));
@@ -988,7 +1058,9 @@
       el("loan_calcBtn").addEventListener("click", calculate);
       el("loan_resetBtn").addEventListener("click", resetForm);
 
+      // 初期化
       setExistingMode(false);
+      setExistInputMode("annual");
       calculate();
     })();
 
